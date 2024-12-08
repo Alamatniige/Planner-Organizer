@@ -34,10 +34,27 @@ class _StudentPlannerPageState extends State<StudentPlannerPage> {
       context: context,
       builder: (context) => AddTaskDialog(
         onTaskAdded: (description, dueDate, dueTime, priority) async {
-          // Convert dueDate to DateTime and normalize it to UTC with midnight time
-          DateTime normalizedDueDate = DateTime.parse(dueDate as String)
-              .toUtc()
-              .subtract(Duration(hours: DateTime.now().timeZoneOffset.inHours));
+          // Safely convert dueDate to DateTime
+          DateTime? normalizedDueDate;
+          try {
+            // Handle different input types
+            if (dueDate is String) {
+              // Parse the date and ensure it's in local time
+              normalizedDueDate = DateTime.parse(dueDate as String);
+            } else if (dueDate is DateTime) {
+              // If it's already a DateTime, use it directly
+              normalizedDueDate = dueDate;
+            } else {
+              throw FormatException('Invalid date format');
+            }
+
+            // Ensure the date is at midnight in the local time zone
+            normalizedDueDate = DateTime(normalizedDueDate.year,
+                normalizedDueDate.month, normalizedDueDate.day);
+          } catch (e) {
+            print('Date conversion error: $e');
+            normalizedDueDate = DateTime.now();
+          }
 
           final success = await _taskController.addTask(
             context: this.context,
@@ -60,30 +77,61 @@ class _StudentPlannerPageState extends State<StudentPlannerPage> {
   }
 
   Future<void> _loadTasks() async {
-    final fetchedTasks = await _taskController.fetchTasks();
-    setState(() {
-      tasks = fetchedTasks;
+    try {
+      final fetchedTasks = await _taskController.fetchTasks();
+      setState(() {
+        tasks = fetchedTasks;
 
-      // Organize tasks by normalized date
-      _eventsByDay = {};
-      for (var task in tasks) {
-        // Parse the due date in the local time zone
-        final taskDate = DateTime.parse(task.dueDate);
+        // Organize tasks by normalized date
+        _eventsByDay = {};
+        for (var task in tasks) {
+          // Safely parse the due date
+          DateTime? taskDate;
+          try {
+            taskDate = _parseDateSafely(task.dueDate);
+          } catch (e) {
+            print('Error parsing task date: $e');
+            continue; // Skip this task if date parsing fails
+          }
 
-        // Normalize the date to midnight in the local time zone
-        final normalizedDate =
-            DateTime(taskDate.year, taskDate.month, taskDate.day);
+          // Normalize the date to midnight in the local time zone
+          final normalizedDate =
+              DateTime(taskDate.year, taskDate.month, taskDate.day);
 
-        // Add task to the appropriate date in the map
-        if (!_eventsByDay.containsKey(normalizedDate)) {
-          _eventsByDay[normalizedDate] = [];
+          // Add task to the appropriate date in the map
+          if (!_eventsByDay.containsKey(normalizedDate)) {
+            _eventsByDay[normalizedDate] = [];
+          }
+          _eventsByDay[normalizedDate]!.add(task);
         }
-        _eventsByDay[normalizedDate]!.add(task);
-      }
-    });
+      });
+    } catch (e) {
+      print('Error loading tasks: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load tasks: $e')),
+      );
+    }
   }
 
-// Also update the _getTasksForDay method accordingly
+// Robust date parsing method
+  DateTime _parseDateSafely(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return DateTime.now();
+    }
+
+    try {
+      // Parse the date and ensure it's in local time
+      DateTime parsedDate = DateTime.parse(dateString);
+
+      // Return the date at midnight in the local time zone
+      return DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+    } catch (e) {
+      print('Failed to parse date: $dateString');
+      return DateTime.now();
+    }
+  }
+
+  // Safely get tasks for a specific day
   List<Task> _getTasksForDay(DateTime day) {
     // Normalize the selected day to midnight in the local time zone
     final normalizedDay = DateTime(day.year, day.month, day.day);
