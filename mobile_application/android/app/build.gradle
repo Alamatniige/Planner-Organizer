@@ -1,3 +1,15 @@
+buildscript {
+    ext.kotlin_version = '1.8.0'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -8,17 +20,17 @@ plugins {
 android {
     namespace = "com.example.mobile_application"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion "25.1.8937393"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+    jvmTarget = 17
     }
-
+    
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.mobile_application"
@@ -37,21 +49,19 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+
+    compileSdk = flutter.compileSdkVersion
+    // Instead of using the Flutter default, explicitly set to a stable version
+    compileSdk = 34  // or 33 if you encounter issues
+
+    defaultConfig {
+        minSdk = 21  // ensure this is set to a reasonable minimum
+        targetSdk = 34  // match the compile SDK version
+    }
 }
 
 flutter {
     source = "../.."
-}
-buildscript {
-    ext.kotlin_version = '1.8.0'
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
 }
 
 allprojects {
